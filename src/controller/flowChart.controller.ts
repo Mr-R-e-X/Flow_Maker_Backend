@@ -1,20 +1,22 @@
 import { NextFunction, Request, Response } from "express";
+import mongoose, { Types } from "mongoose";
 import agenda from "../config/agenda.js";
 import { CustomRequest } from "../middleware/jwt.middleware.js";
 import Edge from "../model/edge.model.js";
 import FlowChart from "../model/flowChart.model.js";
-import Node from "../model/nodes.model.js";
+import LeadSource, { ILeadSource } from "../model/leadSources.model.js";
+import Node, { INode } from "../model/nodes.model.js";
 import Workflow from "../model/servicesStatus.model.js";
-import ApiError from "../utils/apiError.js";
-import ApiResponse from "../utils/apiResponse.js";
-import AsyncHandler from "../utils/asyncHandler.js";
-import mongoose, { Types } from "mongoose";
-import Template from "../model/template.model.js";
+import Template, { ITemplate } from "../model/template.model.js";
 import {
   getEmailsAndUsernamesFromTable,
   parseBufferCsvToTable,
 } from "../services/csvparser.js";
-import LeadSource from "../model/leadSources.model.js";
+import ApiError from "../utils/apiError.js";
+import ApiResponse from "../utils/apiResponse.js";
+import AsyncHandler from "../utils/asyncHandler.js";
+
+// Type definitions for request bodies
 
 // Utility to fetch a flow chart by ID with aggregation
 const fetchFlowChartDetails = async (id: string) => {
@@ -49,9 +51,9 @@ const fetchFlowChartDetails = async (id: string) => {
   ]);
 };
 
-// Fetch a single flow chart with its details
+// Fetch a single flowchart with its details
 const getSingleFlowChartDetails = AsyncHandler(
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const flowChartDetails = await fetchFlowChartDetails(id);
 
@@ -71,9 +73,9 @@ const getSingleFlowChartDetails = AsyncHandler(
   }
 );
 
-// Fetch all flow charts for a user
+// Fetch all flowcharts for a user
 const getAllFlowCharts = AsyncHandler(
-  async (req: CustomRequest, res: Response) => {
+  async (req: CustomRequest, res: Response): Promise<void> => {
     const flowCharts = await FlowChart.find({ userId: req.user?._id }).select(
       "title description"
     );
@@ -85,8 +87,13 @@ const getAllFlowCharts = AsyncHandler(
   }
 );
 
+// Create nodes
 const createNode = AsyncHandler(
-  async (req: CustomRequest, res: Response, next: NextFunction) => {
+  async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     const { nodesList } = req.body;
     if (!nodesList) {
       throw new ApiError(400, "Nodes list is required");
@@ -98,9 +105,9 @@ const createNode = AsyncHandler(
           type: node.type,
           id: node.id,
           data: {
-            label: node.data.label,
-            type: node.data.type,
-            source: node.data.source,
+            label: node.data?.label,
+            type: node.data?.type,
+            source: node.data?.source,
           },
           position: node.position,
         };
@@ -109,29 +116,24 @@ const createNode = AsyncHandler(
           type: node.type,
           id: node.id,
           data: {
-            label: node.data.label,
-            type: node.data.type,
-            template: node.data.source,
+            label: node.data?.label,
+            type: node.data?.type,
+            template: node.data?.source,
           },
           position: node.position,
         };
       } else if (node.type === "Delay") {
-        const splitedStr = node.data.source.split(" ");
-        const unitVal =
-          splitedStr[1] === "minutes"
-            ? 1
-            : splitedStr[1] === "hours"
-              ? 60
-              : 1440;
+        const [value, unit] = node.data?.source?.split(" ") || [];
+        const unitVal = unit === "minutes" ? 1 : unit === "hours" ? 60 : 1440;
+        const delay = Number(value) * unitVal;
 
-        const delay = Number(splitedStr[0]) * unitVal;
         return {
           type: node.type,
           id: node.id,
           data: {
-            type: node.data.type,
-            label: node.data.label,
-            delay: delay,
+            type: node.data?.type,
+            label: node.data?.label,
+            delay,
           },
           position: node.position,
         };
@@ -140,36 +142,42 @@ const createNode = AsyncHandler(
 
     const createdNodes = await Node.insertMany(nodes);
 
-    return res
+    res
       .status(201)
-      .json(new ApiResponse(200, "Nodes created successfully", createdNodes));
+      .json(new ApiResponse(201, "Nodes created successfully", createdNodes));
   }
 );
 
 // Create edges
-const createEdge = AsyncHandler(async (req: Request, res: Response) => {
-  const { edgesList } = req.body;
+const createEdge = AsyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { edgesList } = req.body;
 
-  if (!edgesList || !Array.isArray(edgesList)) {
-    throw new ApiError(400, "Edges list is required and must be an array");
+    if (!edgesList || !Array.isArray(edgesList)) {
+      throw new ApiError(400, "Edges list is required and must be an array");
+    }
+
+    const edges = edgesList.map((edge) => ({
+      source: edge.source,
+      target: edge.target,
+      type: edge.type,
+      animated: edge.animated,
+    }));
+
+    const createdEdges = await Edge.insertMany(edges);
+    res
+      .status(201)
+      .json(new ApiResponse(201, "Edges created successfully", createdEdges));
   }
+);
 
-  const edges = edgesList.map((edge) => ({
-    source: edge.source,
-    target: edge.target,
-    type: edge.type,
-    animated: edge.animated,
-  }));
-
-  const createdEdges = await Edge.insertMany(edges);
-  res
-    .status(201)
-    .json(new ApiResponse(201, "Edges created successfully", createdEdges));
-});
-
-// Create a flow chart
+// Create a flowchart
 const createFlowChart = AsyncHandler(
-  async (req: CustomRequest, res: Response) => {
+  async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     const { title, description, nodes, edges } = req.body;
 
     if (!title || !description || !nodes || !edges) {
@@ -183,6 +191,7 @@ const createFlowChart = AsyncHandler(
       title,
       userId: new mongoose.Types.ObjectId(req.user?._id),
     });
+
     if (existingFlowChart) {
       throw new ApiError(409, "A flowchart with the same title already exists");
     }
@@ -194,11 +203,15 @@ const createFlowChart = AsyncHandler(
       nodes,
       edges,
     });
+
     if (!flowChart) {
       throw new ApiError(500, "Failed to create flowchart");
     }
 
-    const workflow = await scheduleWorkflow(req.user?._id!, flowChart._id);
+    const workflow = await scheduleWorkflow(
+      req.user?._id!,
+      flowChart._id as mongoose.Types.ObjectId
+    );
     res.status(201).json(
       new ApiResponse(201, "Flowchart created and workflow scheduled", {
         flowChart,
@@ -208,9 +221,9 @@ const createFlowChart = AsyncHandler(
   }
 );
 
-// Remove a flow chart
+// Remove a flowchart
 const removeFlowChart = AsyncHandler(
-  async (req: CustomRequest, res: Response) => {
+  async (req: CustomRequest, res: Response): Promise<void> => {
     const { flowChartId } = req.params;
 
     if (!flowChartId) {
@@ -234,22 +247,20 @@ const removeFlowChart = AsyncHandler(
   }
 );
 
+// Schedule a workflow
 const scheduleWorkflow = async (
   userId: string,
   flowChartId: Types.ObjectId
-): Promise<any> => {
+) => {
   const flowChart = await FlowChart.findById(flowChartId)
     .populate("nodes")
-    .lean()
-    .exec();
+    .lean();
 
   if (!flowChart) {
     throw new ApiError(404, "Flowchart not found");
   }
 
-  const leadNode = await LeadSource.findOne({
-    _id: flowChart.nodes[0]?.data.source,
-  });
+  const leadNode = await LeadSource.findById(flowChart.nodes[0]?.data.source);
 
   if (!leadNode) throw new ApiError(404, "Lead source not found");
 
@@ -264,21 +275,21 @@ const scheduleWorkflow = async (
     status: "pending",
     nodes: flowChart.nodes.map((node: any) => ({
       type: node.type,
-      delayDuration: node.type === "Delay" ? node.data.delay : null,
-      source: node.type === "Lead" ? node.data.source : null,
-      templateId: node.type === "Email" ? node.data.template : null,
+      delayDuration: node.type === "Delay" ? node.data?.delay : null,
+      source: node.type === "Lead" ? node.data?.source : null,
+      templateId: node.type === "Email" ? node.data?.template : null,
     })),
   });
 
   let currentDelay = 0;
 
   for (const node of workflow.nodes) {
-    // const jobId = `job-${workflowId}-${node.templateId || node.delayDuration}`;
-
     if (node.type === "Delay") {
       currentDelay += node.delayDuration!;
     } else if (node.type === "Email") {
-      const template = await Template.findById(node.templateId).lean();
+      const template = (await Template.findById(
+        node.templateId
+      ).lean()) as ITemplate;
       if (!template) throw new ApiError(404, "Email template not found");
       await agenda.schedule(
         `in ${Math.floor(currentDelay)} minutes`,
