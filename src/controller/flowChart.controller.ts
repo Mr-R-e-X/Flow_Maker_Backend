@@ -259,7 +259,7 @@ const scheduleWorkflow = async (
   if (!flowChart) {
     throw new ApiError(404, "Flowchart not found");
   }
-
+  // @ts-ignore: Ignore the error regarding accessing 'data' on the node
   const leadNode = await LeadSource.findById(flowChart.nodes[0]?.data.source);
 
   if (!leadNode) throw new ApiError(404, "Lead source not found");
