@@ -29,6 +29,7 @@ const signUpManual = AsyncHandler(
       signUpManualSchema
     );
     if (!result.success) {
+      //@ts-ignore: Ignore
       throw new ApiError(400, "validation error !", result.error);
     }
     const verifiedUserExists = await User.findOne({
@@ -103,6 +104,7 @@ const signInManual = AsyncHandler(
     const { email, password } = req.body;
     const result = inputValidation({ email, password }, signInManualSchema);
     if (!result.success) {
+      //@ts-ignore: Ignore
       throw new ApiError(400, "validation error !", result.error);
     }
     const user = await User.findOne({ email: email });
@@ -132,6 +134,7 @@ const verifyUser = AsyncHandler(
     const { otp } = req.body;
     const result = inputValidation({ otp }, verifyOtpSchema);
     if (!result.success) {
+      // @ts-ignore: Ignore
       throw new ApiError(400, "validation error !", result.error);
     }
     const user = await User.findById(id).select("+otp +otpExpiry");
