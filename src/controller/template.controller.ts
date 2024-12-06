@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
+import { CustomRequest } from "../middleware/jwt.middleware.js";
+import Template from "../model/template.model.js";
 import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import AsyncHandler from "../utils/asyncHandler.js";
-import Template from "../model/template.model.js";
-import { CustomRequest } from "../middleware/jwt.middleware.js";
 
 const getAllTemplates = AsyncHandler(
   async (req: CustomRequest, res: Response, next: NextFunction) => {
@@ -95,9 +95,5 @@ const updateTemplate = AsyncHandler(
 );
 
 export {
-  getAllTemplates,
-  removeTemplate,
-  getOneTemplate,
-  createTemplate,
-  updateTemplate,
+  createTemplate, getAllTemplates, getOneTemplate, removeTemplate, updateTemplate
 };

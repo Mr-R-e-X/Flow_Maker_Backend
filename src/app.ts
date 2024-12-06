@@ -19,18 +19,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// app.use((req, res, next) => {
-//   if (!req.cookies.userSession) {
-//     res.cookie("userSession", "sessionValue", {
-//       httpOnly: true,
-//       secure: false,
-//       maxAge: 3600000,
-//       sameSite: "Strict", // Restrict cross-origin usage
-//     });
-//   }
-//   next();
-// });
-
 import errorHandler from "./middleware/errorHandler.middleware.js";
 import router from "./routes/index.routes.js";
 

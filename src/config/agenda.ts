@@ -18,7 +18,7 @@ agenda.define("send email", async (job) => {
 
     try {
       const emailInfo = await sendMail(user.email, subject, personalizedBody);
-      console.log(`Email sent to ${user.username}:`, emailInfo);
+      console.log(`Email sent to ${user.username}:`, emailInfo.response);
     } catch (error) {
       console.error(`Failed to send email to ${user.username}:`, error);
     }
@@ -36,5 +36,4 @@ agenda.on("ready", async () => {
   console.log("Agenda started");
 });
 
-// console.log(agenda);
 export default agenda;

@@ -4,8 +4,8 @@ import agenda from "../config/agenda.js";
 import { CustomRequest } from "../middleware/jwt.middleware.js";
 import Edge from "../model/edge.model.js";
 import FlowChart from "../model/flowChart.model.js";
-import LeadSource, { ILeadSource } from "../model/leadSources.model.js";
-import Node, { INode } from "../model/nodes.model.js";
+import LeadSource from "../model/leadSources.model.js";
+import Node from "../model/nodes.model.js";
 import Workflow from "../model/servicesStatus.model.js";
 import Template, { ITemplate } from "../model/template.model.js";
 import {
@@ -16,9 +16,6 @@ import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import AsyncHandler from "../utils/asyncHandler.js";
 
-// Type definitions for request bodies
-
-// Utility to fetch a flow chart by ID with aggregation
 const fetchFlowChartDetails = async (id: string) => {
   return await FlowChart.aggregate([
     { $match: { _id: new Types.ObjectId(id) } },
@@ -51,7 +48,6 @@ const fetchFlowChartDetails = async (id: string) => {
   ]);
 };
 
-// Fetch a single flowchart with its details
 const getSingleFlowChartDetails = AsyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
@@ -73,7 +69,6 @@ const getSingleFlowChartDetails = AsyncHandler(
   }
 );
 
-// Fetch all flowcharts for a user
 const getAllFlowCharts = AsyncHandler(
   async (req: CustomRequest, res: Response): Promise<void> => {
     const flowCharts = await FlowChart.find({ userId: req.user?._id }).select(
@@ -87,7 +82,6 @@ const getAllFlowCharts = AsyncHandler(
   }
 );
 
-// Create nodes
 const createNode = AsyncHandler(
   async (
     req: CustomRequest,
@@ -148,7 +142,6 @@ const createNode = AsyncHandler(
   }
 );
 
-// Create edges
 const createEdge = AsyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { edgesList } = req.body;
@@ -171,7 +164,6 @@ const createEdge = AsyncHandler(
   }
 );
 
-// Create a flowchart
 const createFlowChart = AsyncHandler(
   async (
     req: CustomRequest,
@@ -221,7 +213,6 @@ const createFlowChart = AsyncHandler(
   }
 );
 
-// Remove a flowchart
 const removeFlowChart = AsyncHandler(
   async (req: CustomRequest, res: Response): Promise<void> => {
     const { flowChartId } = req.params;
@@ -247,7 +238,6 @@ const removeFlowChart = AsyncHandler(
   }
 );
 
-// Schedule a workflow
 const scheduleWorkflow = async (
   userId: string,
   flowChartId: Types.ObjectId
@@ -281,18 +271,19 @@ const scheduleWorkflow = async (
     })),
   });
 
-  let currentDelay = 0;
+  let accumulatedDelay = 0;
 
   for (const node of workflow.nodes) {
     if (node.type === "Delay") {
-      currentDelay += node.delayDuration!;
+      accumulatedDelay += node.delayDuration!;
     } else if (node.type === "Email") {
       const template = (await Template.findById(
         node.templateId
       ).lean()) as ITemplate;
       if (!template) throw new ApiError(404, "Email template not found");
+
       await agenda.schedule(
-        `in ${Math.floor(currentDelay)} minutes`,
+        `in ${Math.floor(accumulatedDelay)} minutes`,
         "send email",
         {
           sourceData: leadEmailAndUsername,
@@ -304,6 +295,7 @@ const scheduleWorkflow = async (
       );
     }
   }
+
   return workflow;
 };
 

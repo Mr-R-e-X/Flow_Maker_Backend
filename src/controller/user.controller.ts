@@ -1,5 +1,10 @@
 import { NextFunction, Request, Response } from "express";
+import { COOKIE_OPTIONS } from "../constants/constants.js";
 import { inputValidation } from "../helper/inputValidation.js";
+import { CustomRequest } from "../middleware/jwt.middleware.js";
+import FlowChart from "../model/flowChart.model.js";
+import LeadSource from "../model/leadSources.model.js";
+import Template from "../model/template.model.js";
 import User from "../model/user.model.js";
 import {
   signInManualSchema,
@@ -10,12 +15,6 @@ import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import AsyncHandler from "../utils/asyncHandler.js";
 import { sendVerificationEmail } from "../utils/nodemailer.js";
-import { COOKIE_OPTIONS } from "../constants/constants.js";
-import { CustomRequest } from "../middleware/jwt.middleware.js";
-import FlowChart from "../model/flowChart.model.js";
-import Template from "../model/template.model.js";
-import mongoose from "mongoose";
-import LeadSource from "../model/leadSources.model.js";
 
 const signUpManual = AsyncHandler(
   async (
@@ -213,4 +212,4 @@ const logOut = AsyncHandler(
   }
 );
 
-export { signUpManual, signInManual, verifyUser, getProfile, logOut };
+export { getProfile, logOut, signInManual, signUpManual, verifyUser };
