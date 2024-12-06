@@ -176,6 +176,11 @@ const getProfile = AsyncHandler(async (req: CustomRequest, res: Response) => {
       },
     },
     {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+    {
       $project: {
         _id: 1,
         title: 1,
@@ -185,7 +190,7 @@ const getProfile = AsyncHandler(async (req: CustomRequest, res: Response) => {
         edges: 1,
       },
     },
-  ]).sort({ createdAt: -1 });
+  ]);
   const userTemplates = await Template.find({ userId: user._id })
     .sort({ createdAt: -1 })
     .select("-__v");

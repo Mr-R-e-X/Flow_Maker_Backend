@@ -70,11 +70,12 @@ const getSingleFlowChartDetails = AsyncHandler(
 );
 
 const getAllFlowCharts = AsyncHandler(
-  async (req: CustomRequest, res: Response): Promise<void> => {
-    const flowCharts = await FlowChart.find({ userId: req.user?._id }).select(
-      "title description"
-    );
-    res
+  async (req: CustomRequest, res: Response): Promise<Response> => {
+    const flowCharts = await FlowChart.find({ userId: req.user?._id }).sort({
+      createdAt: -1,
+    });
+
+    return res
       .status(200)
       .json(
         new ApiResponse(200, "Successfully fetched flowcharts", flowCharts)
@@ -87,7 +88,7 @@ const createNode = AsyncHandler(
     req: CustomRequest,
     res: Response,
     next: NextFunction
-  ): Promise<void> => {
+  ): Promise<Response> => {
     const { nodesList } = req.body;
     if (!nodesList) {
       throw new ApiError(400, "Nodes list is required");
@@ -136,14 +137,14 @@ const createNode = AsyncHandler(
 
     const createdNodes = await Node.insertMany(nodes);
 
-    res
+    return res
       .status(201)
       .json(new ApiResponse(201, "Nodes created successfully", createdNodes));
   }
 );
 
 const createEdge = AsyncHandler(
-  async (req: Request, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<Response> => {
     const { edgesList } = req.body;
 
     if (!edgesList || !Array.isArray(edgesList)) {
@@ -158,7 +159,7 @@ const createEdge = AsyncHandler(
     }));
 
     const createdEdges = await Edge.insertMany(edges);
-    res
+    return res
       .status(201)
       .json(new ApiResponse(201, "Edges created successfully", createdEdges));
   }
@@ -169,7 +170,7 @@ const createFlowChart = AsyncHandler(
     req: CustomRequest,
     res: Response,
     next: NextFunction
-  ): Promise<void> => {
+  ): Promise<Response> => {
     const { title, description, nodes, edges } = req.body;
 
     if (!title || !description || !nodes || !edges) {
@@ -204,7 +205,7 @@ const createFlowChart = AsyncHandler(
       req.user?._id!,
       flowChart._id as mongoose.Types.ObjectId
     );
-    res.status(201).json(
+    return res.status(201).json(
       new ApiResponse(201, "Flowchart created and workflow scheduled", {
         flowChart,
         workflow,
@@ -214,7 +215,7 @@ const createFlowChart = AsyncHandler(
 );
 
 const removeFlowChart = AsyncHandler(
-  async (req: CustomRequest, res: Response): Promise<void> => {
+  async (req: CustomRequest, res: Response): Promise<Response> => {
     const { flowChartId } = req.params;
 
     if (!flowChartId) {
@@ -230,7 +231,7 @@ const removeFlowChart = AsyncHandler(
     await Edge.deleteMany({ _id: { $in: flowChart.edges } });
     await FlowChart.findByIdAndDelete(flowChartId);
 
-    res
+    return res
       .status(200)
       .json(
         new ApiResponse(200, "Flowchart and related data removed successfully")
